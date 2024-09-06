@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Country Game</title>
+    <style>
+        .button-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 300px; /* Define the width of the container */
+            height: 200px; /* Define the height of the container */
+        }
+        .easy-button {
+            background-color: #4CAF50; /* Green */
+        }
+
+        /* Styles for the Medium button */
+        .medium-button {
+            background-color: orange; /* Red */
+        }
+
+        /* Styles for the Hard button */
+        .hard-button {
+            background-color: red; /* Blue */
+        }
+
+        .button-container button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            font-size: 16px;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .button-container button:hover {
+            opacity: 0.8;
+        }
+
+        .popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 400px;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 2px solid #000;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 24px;
+            z-index: 1000; /* Ensure it's above other content */
+        }
+        .retry-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .retry-button:hover {
+            background-color: #0056b3;
+        }
+
+
+
+        .country-panel {
+            position: fixed;
+            width: 200px; /* Adjust the width as needed */
+            padding: 10px;
+            text-align: center;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+            display: none; /* Hide the panel by default */
+        }
+
+        .country-panel h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #333;
+        }
+
+        .country-panel p {
+            margin: 5px 0;
+            font-size: 1rem;
+            color: #666;
+        }
+        .current-country-panel {
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .destination-country-panel {
+            top: 50px; /* Adjust the distance from the top */
+            left: 50%; /* Center horizontally */
+            transform: translateX(-50%); /* Center horizontally */
+        }
+
+        .optimal-steps-panel {
+            top: 140px;
+            left: 30%;
+            transform: translateX(-50%);
+            box-shadow: none;
+        }
+        .current-steps-panel {
+            top: 140px;
+            left: 70%;
+            transform: translateX(-50%);
+            box-shadow: none;
+        }
+
+        .country-container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .country-button {
+            background: none;
+            border: none;
+            padding: 5px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .country-button:hover {
+            color: blue; /* Change color on hover */
+            /* text-decoration: underline;  */
+        }
+
+    </style>
+</head>
+<body>
+    <div class="country-panel current-country-panel">
+        <h2>You are here:</h2>
+        <p id="current-country"></p>
+    </div>
+
+    <div class="country-panel destination-country-panel">
+        <h2>Destination:</h2>
+        <p id="destination-country"></p>
+    </div>
+
+    <div class="country-panel optimal-steps-panel">
+        <h2>Shortest Possible Way</h2>
+        <p id="optimal-steps"></p>
+    </div>
+    <div class="country-panel current-steps-panel">
+        <h2>Number of Steps</h2>
+        <p id="current-steps"></p>
+    </div>
+    <div class="button-container">
+        <button class="easy-button">Easy</button>
+        <button class="medium-button">Medium</button>
+        <button class="hard-button">Hard</button>
+    </div>
+    
+
+    <script>
+
+        document.querySelector('.button-container').addEventListener('click', function(event) {
+            if (event.target.tagName === 'BUTTON') {
+                const diff = event.target.textContent;
+                document.querySelector('.button-container').style.display = 'none';
+                startGame(diff); // Log the text content of the clicked button
+            }
+        });
+
+        
+
+        function startGame(diff) {
+            const d = diff
+            fetch('/start_game', {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    difficulty: d
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const current = data.current
+                    const goal = data.goal
+                    const options = data.options
+                    const steps = data.steps
+                    const length = data.length
+                    update(current, goal, options, steps, length)
+                })
+            .catch(error => {
+                console.log('Error', error);
+            });
+        }
+
+        function movePlayer(destination) {
+            fetch('/move_player', {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    dest: destination 
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const current = data.current
+                const goal = data.goal
+                const options = data.options
+                const steps = data.steps
+                const length = data.length
+                update(current, goal, options, steps, length)
+            })
+        }
+
+        function isGameOver() {
+            fetch('/is_game_over', {
+                method: 'GET'
+            })
+            .then(response => response.json())
+            .then(data => {
+                const decision = data.decision;
+                const shortestWay = data.shortest_way;
+                if (decision == 'win') {
+                    win();
+                    console.log(shortestWay);
+                    displayCountriesWithArrows(shortestWay);
+                } else if (decision == 'lose') {
+                    lose();
+                    console.log(shortestWay);
+                    displayCountriesWithArrows(shortestWay);
+                }
+            })
+        }
+
+        function lose() {
+            const losePopup = document.createElement('div');
+            losePopup.classList.add('popup');
+            losePopup.style.backgroundColor = 'red'; // Change color for lose scenario
+            losePopup.textContent = 'You Lose!';
+            createRetryButton()
+            document.body.appendChild(losePopup);
+        }
+
+        function win() {
+            const winPopup = document.createElement('div');
+            winPopup.classList.add('popup');
+            winPopup.style.backgroundColor = 'green'; // Change color for win scenario
+            winPopup.textContent = 'You Win!';
+            createRetryButton()
+            document.body.appendChild(winPopup);
+        }
+        function displayCountriesWithArrows(countries) {
+            const container = document.createElement('div');
+            container.classList.add('country-container');
+            const paragraph = document.createElement('p');
+            for (let i = 0; i < countries.length; i++) {
+                paragraph.textContent += countries[i];
+                if (i < countries.length - 1) {
+                    paragraph.innerHTML += ' &#8594; '; 
+                }
+            }
+            container.appendChild(paragraph);
+
+            container.style.top = '60%'
+
+            document.body.appendChild(container);
+        }
+
+
+        function createRetryButton() {
+            const retryButton = document.createElement('button');
+            retryButton.textContent = 'Retry';
+            retryButton.style.left = '50%';
+            retryButton.style.top = '70%';
+            retryButton.classList.add('retry-button'); 
+            retryButton.addEventListener('click', function() {
+                location.reload();
+            });
+            
+            document.body.appendChild(retryButton);
+        }
+
+
+        function update(current, goal, options, steps, length) {
+            document.querySelectorAll('.country-panel').forEach(panel => {
+                panel.style.display = 'block'
+            })
+            // document.getElementById('current-country-panel').style.display = 'block';
+            // document.getElementById('destination-country-panel').style.display = 'block';
+            document.getElementById('current-steps').textContent = steps;
+            document.getElementById('optimal-steps').textContent = length;
+            const destinationElement = document.getElementById('destination-country');
+            destinationElement.textContent = goal;
+            const currentCountryElement = document.getElementById('current-country');
+            currentCountryElement.textContent = current;
+            displayCountries(options)
+            isGameOver()
+        }
+
+        function displayCountries(countries) {
+            let container = document.querySelector('.country-container');
+            
+
+            // Create a new container if it doesn't exist
+            if (!container) {
+                container = document.createElement('div');
+                container.classList.add('country-container');
+                document.body.appendChild(container);
+            }
+            container.innerHTML = '';
+            const numCountries = countries.length;
+
+            for (let i = 0; i < numCountries; i++) {
+                const country = countries[i];
+                const button = document.createElement('button');
+
+                button.textContent = country;
+                button.classList.add('country-button');
+                container.appendChild(button);
+            }
+            const countryButtons = container.querySelectorAll('.country-button');
+            countryButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const selectedCountry = button.textContent;
+                    movePlayer(selectedCountry);
+                    console.log("here");
+                });
+            });
+
+            // Append the container to the document body
+            document.body.appendChild(container);
+        }
+
+
+
+
+    </script>
+</body>
+</html>
